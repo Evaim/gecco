@@ -46,6 +46,8 @@ import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.apache.http.util.CharArrayBuffer;
 
+import com.geccocrawler.gecco.downloader.proxy.Proxys;
+import com.geccocrawler.gecco.downloader.proxy.ProxysContext;
 import com.geccocrawler.gecco.request.HttpPostRequest;
 import com.geccocrawler.gecco.request.HttpRequest;
 import com.geccocrawler.gecco.response.HttpResponse;
@@ -144,14 +146,20 @@ public class HttpClientDownloader extends AbstractDownloader {
 		}
 		//request config
 		RequestConfig.Builder builder = RequestConfig.custom()
-		.setConnectionRequestTimeout(timeout)
-		.setSocketTimeout(timeout)
-		.setConnectionRequestTimeout(timeout)
+		.setConnectionRequestTimeout(1000)//从连接池获取连接的超时时间
+		.setSocketTimeout(timeout)//获取内容的超时时间
+		.setConnectTimeout(timeout)//建立socket连接的超时时间
 		.setRedirectsEnabled(false);
 		//proxy
-		HttpHost proxy = Proxys.getProxy();
-		if(proxy != null) {
-			builder.setProxy(proxy);
+		HttpHost proxy = null;
+		Proxys proxys = ProxysContext.get();
+		boolean isProxy = ProxysContext.isEnableProxy();
+		if(proxys != null && isProxy) {
+			proxy = proxys.getProxy();
+			if(proxy != null) {
+				builder.setProxy(proxy);
+				builder.setConnectTimeout(1000);//如果走代理，连接超时时间固定为1s
+			}
 		}
 		reqObj.setConfig(builder.build());
 		//request and response
@@ -187,18 +195,18 @@ public class HttpClientDownloader extends AbstractDownloader {
 			} else {
 				//404，500等
 				if(proxy != null) {
-					Proxys.failure(proxy.toHostString());
+					proxys.failure(proxy.getHostName(), proxy.getPort());
 				}
 				throw new DownloadServerException("" + status);
 			}
 			if(proxy != null) {
-				Proxys.success(proxy.toHostString());
+				proxys.success(proxy.getHostName(), proxy.getPort());
 			}
 			return resp;
 		} catch (IOException e) {
 			//超时等
 			if(proxy != null) {
-				Proxys.failure(proxy.toHostString());
+				proxys.failure(proxy.getHostName(), proxy.getPort());
 			}
 			throw new DownloadException(e);
 		} finally {

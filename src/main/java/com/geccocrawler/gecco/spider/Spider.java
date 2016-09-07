@@ -33,9 +33,9 @@ public class Spider implements Runnable {
 	
 	private CountDownLatch pauseCountDown;
 	
-	private boolean stop;
+	private volatile boolean stop;
 	
-	private boolean pause;
+	private volatile boolean pause;
 	
 	private GeccoEngine engine;
 	
@@ -175,6 +175,7 @@ public class Spider implements Runnable {
 		this.stop = true;
 	}
 	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void pipelines(SpiderBean spiderBean, SpiderBeanContext context) {
 		List<Pipeline> pipelines = context.getPipelines();
 		if(pipelines != null) {

@@ -5,3 +5,5 @@
 .classpath
 .idea/
 *.iml
+/.idea
+.gitignore
